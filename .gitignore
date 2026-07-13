@@ -35,3 +35,4 @@ build/
 !/.claude/
 !/.cursor/
 !/.chatgpt/
+!/docs/
