@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE generatorConfiguration
+        PUBLIC "-//mybatis.org//DTD MyBatis Generator Configuration 1.0//EN"
+        "https://mybatis.org/dtd/mybatis-generator-config_1_0.dtd">
+<generatorConfiguration>
+    <context id="rfcMySql" targetRuntime="MyBatis3">
+        <plugin type="org.mybatis.generator.plugins.SerializablePlugin"/>
+
+        <jdbcConnection driverClass="com.mysql.cj.jdbc.Driver"
+                        connectionURL="${rfc.db.url}"
+                        userId="${rfc.db.username}"
+                        password="${rfc.db.password}">
+            <property name="nullCatalogMeansCurrent" value="true"/>
+        </jdbcConnection>
+
+        <javaTypeResolver>
+            <property name="forceBigDecimals" value="false"/>
+        </javaTypeResolver>
+
+        <javaModelGenerator targetPackage="com.github.zaneway.format.rfc.persistence.model"
+                            targetProject="target/generated-sources/mybatis">
+            <property name="enableSubPackages" value="false"/>
+            <property name="trimStrings" value="true"/>
+        </javaModelGenerator>
+
+        <sqlMapGenerator targetPackage="mapper"
+                         targetProject="target/generated-sources/mybatis"/>
+
+        <javaClientGenerator type="XMLMAPPER"
+                             targetPackage="com.github.zaneway.format.rfc.persistence.mapper"
+                             targetProject="target/generated-sources/mybatis">
+            <property name="enableSubPackages" value="false"/>
+            <property name="mapperAnnotation" value="org.apache.ibatis.annotations.Mapper"/>
+        </javaClientGenerator>
+
+        <table tableName="rfc_document" domainObjectName="RfcDocumentRecord"/>
+        <table tableName="rfc_section" domainObjectName="RfcSectionRecord"/>
+        <table tableName="rfc_unit" domainObjectName="RfcUnitRecord"/>
+        <table tableName="rfc_relation" domainObjectName="RfcRelationRecord"/>
+        <table tableName="rfc_ingestion_run" domainObjectName="RfcIngestionRunRecord"/>
+    </context>
+</generatorConfiguration>

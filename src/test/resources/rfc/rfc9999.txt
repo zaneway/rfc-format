@@ -1,0 +1,44 @@
+Internet Engineering Task Force (IETF)                         A. Example
+Request for Comments: 9999                                  Example Org
+Category: Standards Track                                      July 2026
+ISSN: 2070-1721
+
+                 Example Transport Profile
+
+Abstract
+
+   This document specifies an example transport profile.
+
+Table of Contents
+
+   1.  Introduction ................................................. 3
+   2.  Message Format ............................................... 3
+   2.1.  Encoding ................................................... 3
+
+
+Example                                                          [Page 2]
+
+1.  Introduction
+
+   An implementation MUST preserve the message identifier while a
+   message is retransmitted.
+
+2.  Message Format
+
+   The following type carries a message.
+
+   ExampleMessage ::= SEQUENCE {
+       messageId   INTEGER,
+       payload     OCTET STRING
+   }
+
+2.1.  Encoding
+
+   message = message-id SP payload
+
+   The payload is encoded after the message identifier.
+
+References
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", RFC 2119, March 1997.

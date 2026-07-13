@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: rfc-format
+  datasource:
+    url: jdbc:mysql://localhost:3306/db_pki_offline_ca?useUnicode=true&characterEncoding=utf8&autoReconnect=true&failOverReadOnly=false&useSSL=false
+    username: root
+    password: zaneway
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:db/schema.sql
+  ai:
+    chat:
+      client:
+        enabled: true
+
+mybatis:
+  mapper-locations: classpath*:mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+
+rfc:
+  output-root: ${RFC_OUTPUT_ROOT:./output}
+
