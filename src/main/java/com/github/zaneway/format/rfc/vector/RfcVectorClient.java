@@ -1,0 +1,21 @@
+package com.github.zaneway.format.rfc.vector;
+
+import java.util.List;
+
+/**
+ * 向量数据库操作边界。
+ *
+ * <p>替换语义：先按 rfc_number 删除旧向量再批量写入，保证同一 RFC 重导入后
+ * 集合内不会残留已删除单元的陈旧向量。</p>
+ */
+public interface RfcVectorClient {
+
+  /**
+   * 以整 RFC 为粒度原子替换向量集合。
+   *
+   * @param rfcNumber RFC 编号，作为删除过滤条件与元数据锚点
+   * @param documents 待写入的向量文档列表，空列表时等效于清空该 RFC 的向量
+   * @throws RuntimeException 向量库删除或写入失败时抛出
+   */
+  void replace(String rfcNumber, List<RfcVectorDocument> documents);
+}
