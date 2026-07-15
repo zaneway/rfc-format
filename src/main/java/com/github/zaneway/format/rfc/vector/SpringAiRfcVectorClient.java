@@ -3,6 +3,7 @@ package com.github.zaneway.format.rfc.vector;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -19,9 +20,9 @@ public class SpringAiRfcVectorClient implements RfcVectorClient {
   private final VectorStore vectorStore;
 
   /**
-   * @param vectorStore Spring AI 自动配置的向量存储实例（底层对接 Qdrant）
+   * @param vectorStore 章节条文 collection（{@code rfc-data}）；与 catalog collection 隔离
    */
-  public SpringAiRfcVectorClient(VectorStore vectorStore) {
+  public SpringAiRfcVectorClient(@Qualifier("vectorStore") VectorStore vectorStore) {
     this.vectorStore = vectorStore;
   }
 

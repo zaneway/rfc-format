@@ -1,0 +1,21 @@
+Network Working Group
+Request for Comments: 9102
+Category: Standards Track
+June 2026
+
+Duplicate Body Section Example
+Abstract
+
+   This document is a parser fixture.
+
+1.  Introduction
+
+   Introductory text.
+
+2.  First Section Two
+
+   First body text.
+
+2.  Repeated Section Two
+
+   Second body text.

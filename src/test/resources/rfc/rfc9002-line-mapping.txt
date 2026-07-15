@@ -1,0 +1,16 @@
+Internet Engineering Task Force (IETF)                         A. Example
+Request for Comments: 9002                                  Example Org
+Category: Standards Track                                      July 2026
+ISSN: 2070-1721
+
+                    Line-Mapping Test Profile
+
+Abstract
+
+   This document verifies citation source locations.
+
+1.  Citation Use
+
+Example [Page 1]
+   An implementation MUST process [RFC9999]
+   before accepting the associated message.

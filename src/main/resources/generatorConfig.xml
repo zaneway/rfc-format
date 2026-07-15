@@ -1,42 +1,46 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE generatorConfiguration
-        PUBLIC "-//mybatis.org//DTD MyBatis Generator Configuration 1.0//EN"
-        "https://mybatis.org/dtd/mybatis-generator-config_1_0.dtd">
+  PUBLIC "-//mybatis.org//DTD MyBatis Generator Configuration 1.0//EN"
+  "https://mybatis.org/dtd/mybatis-generator-config_1_0.dtd">
 <generatorConfiguration>
-    <context id="rfcMySql" targetRuntime="MyBatis3">
-        <plugin type="org.mybatis.generator.plugins.SerializablePlugin"/>
+  <context id="rfcMySql" targetRuntime="MyBatis3DynamicSql">
+    <plugin type="org.mybatis.generator.plugins.SerializablePlugin"/>
 
-        <jdbcConnection driverClass="com.mysql.cj.jdbc.Driver"
-                        connectionURL="${rfc.db.url}"
-                        userId="${rfc.db.username}"
-                        password="${rfc.db.password}">
-            <property name="nullCatalogMeansCurrent" value="true"/>
-        </jdbcConnection>
+    <jdbcConnection driverClass="com.mysql.cj.jdbc.Driver"
+      connectionURL="${rfc.db.url}"
+      userId="${rfc.db.username}"
+      password="${rfc.db.password}">
+      <property name="nullCatalogMeansCurrent" value="true"/>
+    </jdbcConnection>
 
-        <javaTypeResolver>
-            <property name="forceBigDecimals" value="false"/>
-        </javaTypeResolver>
+    <javaTypeResolver>
+      <property name="forceBigDecimals" value="false"/>
+    </javaTypeResolver>
 
-        <javaModelGenerator targetPackage="com.github.zaneway.format.rfc.persistence.model"
-                            targetProject="target/generated-sources/mybatis">
-            <property name="enableSubPackages" value="false"/>
-            <property name="trimStrings" value="true"/>
-        </javaModelGenerator>
+    <javaModelGenerator targetPackage="com.github.zaneway.format.rfc.persistence.model"
+      targetProject="src/main/java">
+      <property name="enableSubPackages" value="false"/>
+      <property name="trimStrings" value="true"/>
+    </javaModelGenerator>
 
-        <sqlMapGenerator targetPackage="mapper"
-                         targetProject="target/generated-sources/mybatis"/>
+    <javaClientGenerator type="ANNOTATEDMAPPER"
+      targetPackage="com.github.zaneway.format.rfc.persistence.mapper"
+      targetProject="src/main/java">
+      <property name="enableSubPackages" value="false"/>
+      <property name="mapperAnnotation" value="org.apache.ibatis.annotations.Mapper"/>
+    </javaClientGenerator>
 
-        <javaClientGenerator type="XMLMAPPER"
-                             targetPackage="com.github.zaneway.format.rfc.persistence.mapper"
-                             targetProject="target/generated-sources/mybatis">
-            <property name="enableSubPackages" value="false"/>
-            <property name="mapperAnnotation" value="org.apache.ibatis.annotations.Mapper"/>
-        </javaClientGenerator>
-
-        <table tableName="rfc_document" domainObjectName="RfcDocumentRecord"/>
-        <table tableName="rfc_section" domainObjectName="RfcSectionRecord"/>
-        <table tableName="rfc_unit" domainObjectName="RfcUnitRecord"/>
-        <table tableName="rfc_relation" domainObjectName="RfcRelationRecord"/>
-        <table tableName="rfc_ingestion_run" domainObjectName="RfcIngestionRunRecord"/>
-    </context>
+    <table tableName="rfc_document" domainObjectName="RfcDocumentRecord"/>
+    <table tableName="rfc_document_author" domainObjectName="RfcDocumentAuthorRecord"/>
+    <table tableName="rfc_section" domainObjectName="RfcSectionRecord"/>
+    <table tableName="rfc_unit" domainObjectName="RfcUnitRecord"/>
+    <table tableName="rfc_relation" domainObjectName="RfcRelationRecord"/>
+    <table tableName="rfc_object" domainObjectName="RfcObjectRecord"/>
+    <table tableName="rfc_vector_projection" domainObjectName="RfcVectorProjectionRecord"/>
+    <table tableName="rfc_ingestion_run" domainObjectName="RfcIngestionRunRecord"/>
+    <table tableName="rfc_processing_report" domainObjectName="RfcProcessingReportRecord"/>
+    <table tableName="rfc_llm_document" domainObjectName="RfcLlmDocumentRecord"/>
+    <table tableName="rfc_llm_unit" domainObjectName="RfcLlmUnitRecord"/>
+    <table tableName="rfc_llm_projection" domainObjectName="RfcLlmProjectionRecord"/>
+  </context>
 </generatorConfiguration>

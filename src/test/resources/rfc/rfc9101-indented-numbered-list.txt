@@ -1,0 +1,18 @@
+Network Working Group
+Request for Comments: 9101
+Category: Standards Track
+June 2026
+
+Indented Numbered List Example
+Abstract
+
+   This document is a parser fixture.
+
+1.  Introduction
+
+   The following is a numbered list item, not a section heading.
+   4.2.1.15.  This item remains part of the paragraph.
+
+2.  Conclusion
+
+   Closing text.

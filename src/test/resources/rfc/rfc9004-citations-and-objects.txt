@@ -1,0 +1,42 @@
+Internet Engineering Task Force (IETF)                         A. Example
+Request for Comments: 9004                                  Example Org
+Category: Standards Track                                      July 2026
+ISSN: 2070-1721
+
+              Citation and Rule Object Test Profile
+
+Abstract
+
+   This document provides a compact fixture for deterministic citation and
+   rule-object extraction.
+
+1.  Citation Use
+
+   This profile cites [RFC1000] and RFC 2000.  It applies Section 4.2 of RFC 3000, RFC 4000, Section 5, Section 2.1, and Appendix A.
+
+2.  Structure
+
+   This section provides the enclosing structure.
+
+2.1.  Syntax
+
+   ExampleRecord ::= SEQUENCE {
+       serialNumber  INTEGER,
+       critical      BOOLEAN DEFAULT FALSE
+   }
+
+   id-example OBJECT IDENTIFIER ::= { 1 2 3 4 }
+
+   token = ALPHA / DIGIT
+
+3.  Error Codes
+
+   BAD_REQUEST = 400
+
+4.  Status Codes
+
+   200 - OK
+
+Appendix A.  Example Appendix
+
+   This appendix is a valid internal citation target.
