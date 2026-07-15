@@ -35,11 +35,24 @@
 		<spring-ai.version>2.0.0</spring-ai.version>
 	</properties>
 	<dependencies>
+
+    <!-- Source: https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-web -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+
 		<!-- MyBatis + Spring Boot 整合,用于访问关系型数据库存储 RFC 关系与元数据 -->
 		<dependency>
 			<groupId>org.mybatis.spring.boot</groupId>
 			<artifactId>mybatis-spring-boot-starter</artifactId>
 			<version>4.0.0</version>
+		</dependency>
+		<!-- MyBatis Generator 的 MyBatis3DynamicSql 运行时：承载 Generator 生成的批量 insertMultiple 等标准方法。 -->
+		<dependency>
+			<groupId>org.mybatis.dynamic-sql</groupId>
+			<artifactId>mybatis-dynamic-sql</artifactId>
+			<version>2.0.0</version>
 		</dependency>
 		<!-- Spring AI Ollama 模型接入:支持本地 Ollama 推理服务 -->
 		<dependency>

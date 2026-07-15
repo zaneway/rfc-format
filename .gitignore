@@ -36,3 +36,4 @@ build/
 !/.cursor/
 !/.chatgpt/
 !/docs/
+!/examples/
