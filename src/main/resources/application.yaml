@@ -1,72 +1,28 @@
 spring:
   application:
     name: rfc-format
-  datasource:
-    # serverTimezone=UTC 与业务代码 LocalDateTime.now(UTC) 对齐。
-    # autoReconnect 已被 Connector/J 弃用，空闲保活交给 Hikari keepalive/max-lifetime。
-    url: jdbc:mysql://127.0.0.1:3306/rfc_doc?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false
-    username: root
-    password: zaneway
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    hikari:
-      # 连接池空闲时周期探测，避免持有 MySQL 已关闭的死连接
-      keepalive-time: 60000
-      # 必须短于 MySQL wait_timeout（常见 28800s）；到时主动退役并重建
-      max-lifetime: 1800000
-      # 借出前校验，失败则丢掉该连接并新建
-      connection-test-query: SELECT 1
-      connection-timeout: 10000
-      minimum-idle: 3
-      maximum-pool-size: 10
-      idle-timeout: 600000
-  sql:
-    init:
-      mode: always
-      schema-locations: classpath:db/schema.sql
   ai:
     model:
-      # RFC 问答显式使用 MinimaxChat 中的 OpenAI 兼容模型；Ollama 仅提供 embedding。
       chat: none
       embedding: ollama
-      image: none
-      moderation: none
-      audio:
-        speech: none
-        transcription: none
-    chat:
-      client:
-        enabled: true
     ollama:
-      base-url: http://localhost:11434
+      base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
       embedding:
-        model: qwen3-embedding:8b
+        model: ${OLLAMA_EMBEDDING_MODEL:qwen3-embedding:8b}
         truncate: true
         keep-alive: 5m
     vectorstore:
       type: qdrant
       qdrant:
-        host: localhost
-        port: 6334
-        collection-name: rfc-data
+        host: ${QDRANT_HOST:localhost}
+        port: ${QDRANT_GRPC_PORT:6334}
+        collection-name: ${QDRANT_COLLECTION:rfc-data}
         initialize-schema: true
-mybatis:
-  mapper-locations: classpath*:mapper/*.xml
-  configuration:
-    map-underscore-to-camel-case: true
 
 rfc:
-  llm:
-    base-url: ${RFC_LLM_BASE_URL:}
-    api-key: ${RFC_LLM_API_KEY:}
-    model: ${RFC_LLM_MODEL:}
-    # 完整 RFC 清洗/结构化提示词文件，随应用 JAR 一起发布。
-    prompt-file: classpath:prompts/rfc-structured-parser-prompt.md
-  output-root: ${RFC_OUTPUT_ROOT:./output}
-  catalog:
-    # 独立于 rfc-data 的摘要目录 collection；用于文档发现，不与章节条文混检。
-    collection-name: rfc-catalog
-    initialize-schema: true
-  rag:
-    retrieval:
-      similarity-threshold: 0.45
-      candidate-multiplier: 3
+  vector:
+    # 限制单次 embedding 与 Qdrant add 的文档数，避免全量导入形成超大请求。
+    write-batch-size: ${RFC_VECTOR_WRITE_BATCH_SIZE:32}
+  chunks:
+    # 超长逻辑块按段落/行无损二次切分，避免 embedding 模型静默截断。
+    max-embedding-chars: ${RFC_CHUNK_MAX_EMBEDDING_CHARS:12000}
