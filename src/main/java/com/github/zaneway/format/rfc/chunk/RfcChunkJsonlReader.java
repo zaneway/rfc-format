@@ -49,16 +49,19 @@ public class RfcChunkJsonlReader {
       String line;
       while ((line = reader.readLine()) != null) {
         lineNumber++;
+        // 允许聚合文件中存在空白分隔行，逻辑上直接忽略。
         if (line.isBlank()) {
           continue;
         }
         RfcChunk chunk = parse(line, lineNumber, jsonlPath);
         validate(chunk, lineNumber, jsonlPath);
         if (currentRfc != null && chunk.rfcNumber() != currentRfc) {
+          // 仅在当前 RFC 完整读取后才交付，保证 consumer 看到的是不可变完整分组。
           consumer.accept(currentRfc, List.copyOf(currentChunks));
           completedRfcs.add(currentRfc);
           rfcCount++;
           currentChunks.clear();
+          // RFC 必须在文件中连续出现，防止 delete-by-rfc 的幂等替换出现回跳。
           if (completedRfcs.contains(chunk.rfcNumber())) {
             throw invalid(jsonlPath, lineNumber,
                 "RFC " + chunk.rfcNumber() + " is not stored in one contiguous group");
@@ -73,6 +76,7 @@ public class RfcChunkJsonlReader {
     if (currentRfc == null) {
       throw new IOException("RFC chunk JSONL is empty: " + jsonlPath);
     }
+    // 文件结束后补交最后一个 RFC 分组。
     consumer.accept(currentRfc, List.copyOf(currentChunks));
     return new RfcChunkReadResult(chunkCount, rfcCount + 1);
   }

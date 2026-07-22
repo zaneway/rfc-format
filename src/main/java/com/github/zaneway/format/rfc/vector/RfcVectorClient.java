@@ -14,8 +14,9 @@ public interface RfcVectorClient {
    * 以整 RFC 为一致性粒度替换向量集合。
    *
    * @param rfcNumber RFC 编号，作为删除过滤条件与元数据锚点
-   * @param documents 待写入的向量文档列表，空列表时等效于清空该 RFC 的向量
+   * @param documents 待生成 embedding 并写入的向量文档列表
+   * @return 实际写入与因 embedding 失败跳过的文档数
    * @throws RuntimeException 向量库删除或写入失败时抛出
    */
-  void replace(String rfcNumber, List<RfcVectorDocument> documents);
+  RfcVectorWriteResult replace(String rfcNumber, List<RfcVectorDocument> documents);
 }

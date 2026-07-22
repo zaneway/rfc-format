@@ -1,85 +1,133 @@
 package com.github.zaneway.format.rfc.vector;
 
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.ai.document.Document;
-import org.springframework.ai.vectorstore.VectorStore;
-import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
-import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
- * Spring AI {@link VectorStore} 到 Qdrant 的适配器。
+ * Ollama embedding 与 Qdrant point store 的 RFC 向量编排器。
  *
- * <p>通过 metadata 中的 {@code rfc_number} 字段实现按 RFC 范围的删除-再-写入替换，
- * 避免全量清空集合影响其他 RFC 的向量数据。</p>
+ * <p>单个文档 embedding 失败时记录并跳过；Qdrant 删除或写入失败仍向上抛出，
+ * 避免基础设施故障被误判为可忽略的数据问题。</p>
  */
 @Component
 public class SpringAiRfcVectorClient implements RfcVectorClient {
 
   private static final Logger log = LoggerFactory.getLogger(SpringAiRfcVectorClient.class);
 
-  private final VectorStore vectorStore;
+  private final EmbeddingModel embeddingModel;
+  private final RfcPointStore pointStore;
   private final int batchSize;
 
   /**
-   * @param vectorStore RFC chunk collection（默认 {@code rfc-data}）
-   * @param batchSize   单次 embedding 与 Qdrant 写入的最大文档数
+   * @param embeddingModel Ollama embedding 调用边界
+   * @param pointStore     Qdrant point 删除与写入边界
+   * @param batchSize      单次 embedding 与 Qdrant upsert 的最大文档数
    */
-  public SpringAiRfcVectorClient(@Qualifier("vectorStore") VectorStore vectorStore,
+  public SpringAiRfcVectorClient(EmbeddingModel embeddingModel, RfcPointStore pointStore,
       @Value("${rfc.vector.write-batch-size:32}") int batchSize) {
     if (batchSize <= 0) {
       throw new IllegalArgumentException("rfc.vector.write-batch-size must be positive");
     }
-    this.vectorStore = vectorStore;
+    this.embeddingModel = embeddingModel;
+    this.pointStore = pointStore;
     this.batchSize = batchSize;
   }
 
   /**
    * {@inheritDoc}
    *
-   * <p>先按 {@code rfc_number} 过滤删除，再批量 add；两步均非事务性，
-   * 删除成功但 add 失败时该 RFC 向量暂时为空，需通过重试恢复。</p>
+   * <p>先生成当前 RFC 的可用 embedding，再删除旧点并分批 upsert。批量 embedding
+   * 失败时使用二分法定位失败文档，避免一个超长 chunk 连带丢弃同批正常文档。
+   * 若整个 RFC 均失败，则保留其旧向量，防止 Ollama 整体故障清空线上数据。</p>
    */
   @Override
-  public void replace(String rfcNumber, List<RfcVectorDocument> documents) {
+  public RfcVectorWriteResult replace(String rfcNumber, List<RfcVectorDocument> documents) {
     long startedAt = System.nanoTime();
-    log.info("开始调用 Qdrant 替换 RFC 向量，rfc={}，向量点={}，批大小={}",
+    log.info("开始生成并替换 RFC 向量，rfc={}，候选={}，批大小={}",
         rfcNumber, documents.size(), batchSize);
-    // 仅删除本 RFC 的向量点，保留集合内其他文档；删除与后续写入不是跨系统事务。
-    vectorStore.delete(new FilterExpressionBuilder().eq("rfc_number", rfcNumber).build());
-    List<Document> batch = new ArrayList<>(Math.min(batchSize, documents.size()));
-    int written = 0;
-    for (RfcVectorDocument document : documents) {
-      batch.add(toSpringAiDocument(rfcNumber, document));
-      if (batch.size() == batchSize) {
-        vectorStore.add(List.copyOf(batch));
-        written += batch.size();
-        batch.clear();
+
+    List<List<RfcEmbeddedDocument>> batches = new ArrayList<>();
+    int skipped = 0;
+    for (int start = 0; start < documents.size(); start += batchSize) {
+      int end = Math.min(start + batchSize, documents.size());
+      EmbeddingBatchResult result = embedWithIsolation(
+          rfcNumber, List.copyOf(documents.subList(start, end)));
+      if (!result.documents().isEmpty()) {
+        batches.add(result.documents());
       }
+      skipped += result.skippedCount();
     }
-    if (!batch.isEmpty()) {
-      vectorStore.add(List.copyOf(batch));
+
+    if (!documents.isEmpty() && batches.isEmpty()) {
+      log.error("RFC 所有 embedding 均失败，跳过本次替换并保留旧向量，rfc={}，跳过={}",
+          rfcNumber, skipped);
+      return new RfcVectorWriteResult(0, skipped);
+    }
+
+    // embedding 成功后才删除旧点，避免 Ollama 整体故障先清空当前 RFC。
+    pointStore.deleteByRfc(rfcNumber);
+    int written = 0;
+    for (List<RfcEmbeddedDocument> batch : batches) {
+      pointStore.upsert(rfcNumber, batch);
       written += batch.size();
     }
-    log.info("Qdrant RFC 向量替换完成，rfc={}，写入={}，耗时毫秒={}",
-        rfcNumber, written, (System.nanoTime() - startedAt) / 1_000_000);
+    log.info("RFC 向量替换完成，rfc={}，写入={}，跳过={}，耗时毫秒={}",
+        rfcNumber, written, skipped, elapsedMillis(startedAt));
+    return new RfcVectorWriteResult(written, skipped);
   }
 
-  /**
-   * Qdrant point ID 只能使用 UUID 或无符号整数；业务单元 ID 保留在 metadata 中。
-   */
-  private static Document toSpringAiDocument(String rfcNumber, RfcVectorDocument document) {
-    LinkedHashMap<String, Object> metadata = new LinkedHashMap<>(document.metadata());
-    metadata.putIfAbsent("unit_id", document.id());
-    String pointId = UUID.nameUUIDFromBytes(
-        (rfcNumber + "\0" + document.id()).getBytes(StandardCharsets.UTF_8)).toString();
-    return new Document(pointId, document.text(), metadata);
+  /** 批量调用失败后递归二分，直至定位单个失败文档；成功子批仍保留批量吞吐。 */
+  private EmbeddingBatchResult embedWithIsolation(String rfcNumber,
+      List<RfcVectorDocument> documents) {
+    List<float[]> embeddings;
+    long startedAt = System.nanoTime();
+    try {
+      log.debug("开始调用 Ollama embedding，rfc={}，文档数={}", rfcNumber, documents.size());
+      embeddings = embeddingModel.embed(documents.stream().map(RfcVectorDocument::text).toList());
+      if (embeddings.size() != documents.size()) {
+        throw new IllegalStateException("Embedding count does not match document count");
+      }
+      log.debug("Ollama embedding 完成，rfc={}，文档数={}，耗时毫秒={}",
+          rfcNumber, documents.size(), elapsedMillis(startedAt));
+    } catch (RuntimeException exception) {
+      if (documents.size() == 1) {
+        RfcVectorDocument document = documents.getFirst();
+        log.error("跳过 embedding 失败的 RFC chunk，rfc={}，unitId={}，文本字符数={}，耗时毫秒={}",
+            rfcNumber, document.id(), document.text().length(), elapsedMillis(startedAt), exception);
+        return new EmbeddingBatchResult(List.of(), 1);
+      }
+      int midpoint = documents.size() / 2;
+      log.warn("批量 embedding 失败，二分定位问题 chunk，rfc={}，文档数={}，左批={}，右批={}，异常={}",
+          rfcNumber, documents.size(), midpoint, documents.size() - midpoint,
+          exception.toString());
+      EmbeddingBatchResult left = embedWithIsolation(rfcNumber,
+          List.copyOf(documents.subList(0, midpoint)));
+      EmbeddingBatchResult right = embedWithIsolation(rfcNumber,
+          List.copyOf(documents.subList(midpoint, documents.size())));
+      List<RfcEmbeddedDocument> embedded = new ArrayList<>(
+          left.documents().size() + right.documents().size());
+      embedded.addAll(left.documents());
+      embedded.addAll(right.documents());
+      return new EmbeddingBatchResult(List.copyOf(embedded),
+          left.skippedCount() + right.skippedCount());
+    }
+
+    List<RfcEmbeddedDocument> embedded = new ArrayList<>(documents.size());
+    for (int index = 0; index < documents.size(); index++) {
+      embedded.add(new RfcEmbeddedDocument(documents.get(index), embeddings.get(index)));
+    }
+    return new EmbeddingBatchResult(List.copyOf(embedded), 0);
+  }
+
+  private static long elapsedMillis(long startedAt) {
+    return (System.nanoTime() - startedAt) / 1_000_000;
+  }
+
+  private record EmbeddingBatchResult(List<RfcEmbeddedDocument> documents, int skippedCount) {
   }
 }
